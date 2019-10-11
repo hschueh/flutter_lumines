@@ -1,12 +1,40 @@
+import 'dart:collection';
 import 'dart:io';
 import 'dart:math';
 import 'dart:ui';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_lumines/lumines-game.dart';
 import 'package:tuple/tuple.dart';
 
 class LuminesController {
   final LuminesGame game;
-  LuminesController(this.game);
+  Tuple4 curBr;
+  Queue<Tuple4<int, int, int, int>> nextFive;
+  static Random random;
+  LuminesController(this.game){
+    initialize();
+  }
+  void initialize() async {
+    curBr = getRandomBrickTuple4();
+    nextFive = Queue<Tuple4<int, int, int, int>>();
+    for(int i = 0; i < 5; ++i) {
+      nextFive.add(getRandomBrickTuple4());
+    }
+  }
+
+  static Tuple4<int, int, int, int> getRandomBrickTuple4() {
+    if(random == null) {
+      // Could let user set seed.
+      random = Random(DateTime.now().microsecondsSinceEpoch);
+    }
+    return Tuple4<int, int, int, int>(
+      random.nextInt(100)%2,
+      random.nextInt(100)%2,
+      random.nextInt(100)%2,
+      random.nextInt(100)%2,
+    );
+  }
+
 }
 
 class BOARD {
@@ -23,6 +51,7 @@ class BOARD {
     blockWidth = blockSize;
     blockHeight = blockSize;
     blockSizeSmall = blockSize*(BLOCK_SIZE_SMALL/BLOCK_SIZE);
+    yOffset = boardHeight / 5;
   }
   static const int BOARD_HEIGHT = 360;
   static const int BOARD_WIDTH = 480;
@@ -34,6 +63,7 @@ class BOARD {
   static const int ROW_NUM = 10;
   static const int BLOCK_NUM = 4;
   static const int MAP_OFFSET = 60;
+  static const double GAME_LENGTH = 90;
 
   double boardHeight;
   double boardWidth;
@@ -41,4 +71,5 @@ class BOARD {
   double blockHeight;
   double blockSize;
   double blockSizeSmall;
+  double yOffset;
 }

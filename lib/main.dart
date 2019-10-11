@@ -68,26 +68,56 @@ class GameApp extends StatelessWidget {
           Center(
             child: game.widget,
           ),
-          // Container(
-          //   alignment: Alignment.center,
-          //   margin: EdgeInsets.all(16),
-          //   child: Stack(
-          //     children: [
-          //       Align(
-          //         alignment: Alignment.bottomLeft,
-          //         child: FloatingActionButton.extended(
-          //           onPressed: () {
-          //             // Add your onPressed code here!
-          //           },
-          //           label: Text('退出'),
-          //           icon: Icon(Icons.arrow_back)
-          //         )
-          //       ),
-          //     ]
-          //   ),
-          // ),
+          Container(
+            alignment: Alignment.center,
+            margin: EdgeInsets.all(16),
+            child: Stack(
+              children: [
+                Align(
+                  alignment: Alignment.bottomLeft,
+                  child: FloatingActionButton.extended(
+                    onPressed: () {
+                      game.startGame();
+                    },
+                    label: Text('開始'),
+                    icon: Icon(Icons.play_arrow)
+                  )
+                ),
+              ]
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  // @override
+  // _GameState createState() {
+  //   return _GameState();
+  // }
+}
+
+
+class _GameState extends State<StatefulWidget> {
+  int state = 0;
+
+  void setGameState(int gameState) {
+    setState(() { state = gameState; });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return state==0?FloatingActionButton.extended(
+                    onPressed: () {
+                    },
+                    label: Text('開始'),
+                    icon: Icon(Icons.play_arrow)
+                  ):
+                  FloatingActionButton.extended(
+                    onPressed: () {
+                    },
+                    label: Text('暫停'),
+                    icon: Icon(Icons.pause)
+                  );
   }
 }
