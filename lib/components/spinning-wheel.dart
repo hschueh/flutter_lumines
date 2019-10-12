@@ -1,9 +1,6 @@
+import 'dart:math';
 import 'dart:ui';
-import 'package:flame/flame.dart';
-import 'package:flame/sprite.dart';
-import 'package:flame/components/component.dart';
 import 'package:flutter/gestures.dart';
-import 'package:flutter_lumines/game-controller.dart';
 import 'package:flutter_lumines/lumines-game.dart';
 import 'package:flutter_lumines/vibration-util.dart';
 
@@ -21,6 +18,7 @@ class SpinningWheel extends BaseGameObject {
   Paint darkPaint;
   Paint blackPaint = new Paint()..color = Color(0xff000000)..strokeWidth = 2.5;
   int rotateState = -1;
+  int rotation = 0;
 
   SpinningWheel(LuminesGame game, this.x, this.y, this.lightPaint, this.darkPaint) : super(game) {
     rect = Rect.fromCenter(center: Offset(x, y), width:150, height:150);
@@ -68,9 +66,14 @@ class SpinningWheel extends BaseGameObject {
         tmpRotateState = 0;
       }
     }
-    if(tmpRotateState != rotateState) {
+    if(tmpRotateState == -1) {
       VibrationUtil.lightImpact();
       rotateState = tmpRotateState;
+    } else if(tmpRotateState != rotateState) {
+      VibrationUtil.lightImpact();
+      rotation += tmpRotateState - max(0, rotateState);
+      rotateState = tmpRotateState;
+      rotation = rotation%4;
     }
   }
 }

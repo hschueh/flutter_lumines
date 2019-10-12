@@ -19,7 +19,7 @@ class LuminesGame extends Game {
   double tileSize;
   Size margin;
   LuminesController controller;
-  int touchedRow = -1;
+  int touchedCol = -1;
   // double touchY = -1;
 
   static Paint darkBluePaint = Paint()..color = Color(0xff171779);
@@ -46,6 +46,7 @@ class LuminesGame extends Game {
   int gameState = 0;
 
   List<Brick> waitingBrick = List<Brick>();
+  BrickTile curTile;
 
   LuminesGame() {
     initialize();
@@ -70,11 +71,12 @@ class LuminesGame extends Game {
     for(int i = 0; i < 5; ++i) {
       double size = i>0?board.blockSizeSmall:board.blockSize;
       waitingBrick.add(Brick(this, renderFrom, 0, 0, i>0));
-      waitingBrick.add(Brick(this, renderFrom, size, 0, i>0));
       waitingBrick.add(Brick(this, renderFrom+size, 0, 0, i>0));
       waitingBrick.add(Brick(this, renderFrom+size, size, 0, i>0));
+      waitingBrick.add(Brick(this, renderFrom, size, 0, i>0));
       renderFrom += 2.5*size;
     }
+    curTile = BrickTile(this, 7, 0, controller.curBr);
   }
   void resize(Size size) {
     board = BOARD.getInstance(size);
@@ -91,20 +93,9 @@ class LuminesGame extends Game {
     canvas.drawRect(_nextRect, _nextPaint);
     canvas.drawRect(_bgColorRect, darkBluePaint);
 
-    if(controller.nextFive != null) {
-      List<Tuple4<int, int, int, int>> nexts = controller.nextFive.toList();
-      for(int i = 0; i < nexts.length; ++i) {
-        waitingBrick[i*4].color = nexts[i].item1;
-        waitingBrick[i*4+1].color = nexts[i].item2;
-        waitingBrick[i*4+2].color = nexts[i].item3;
-        waitingBrick[i*4+3].color = nexts[i].item4;
-      }
-    }
-    waitingBrick.forEach((brick)=>brick.render(canvas));
 
-
-    if(touchedRow != -1) {
-      Rect lightBlueRect = Rect.fromLTWH(touchedRow*board.blockWidth, board.yOffset, 2*board.blockWidth, board.boardHeight);
+    if(touchedCol != -1) {
+      Rect lightBlueRect = Rect.fromLTWH(touchedCol*board.blockWidth, board.yOffset, 2*board.blockWidth, board.boardHeight);
       canvas.drawRect(lightBlueRect, bluePaint);
     }
 
@@ -117,6 +108,42 @@ class LuminesGame extends Game {
     }
     canvas.drawLine(Offset(0,_bgColorRect.top+2*board.blockSize), Offset(board.boardWidth,_bgColorRect.top+2*board.blockSize), roofPaint);
     // End of draw main board.
+
+    // Draw bricks
+    if(controller.curBr != null) {
+      curTile.layout = controller.curBr;
+      // -1 is default state
+      curTile.rotate = max(spinningWheel.rotation, 0);
+    }
+
+    if(touchedCol != -1) {
+      curTile.x = touchedCol;
+    } else {
+      curTile.x = 7;
+    }
+    curTile.render(canvas);
+
+    if(controller.nextFive != null) {
+      List<Tuple4<int, int, int, int>> nexts = controller.nextFive.toList(growable: false);
+      for(int i = 0; i < nexts.length; ++i) {
+        waitingBrick[i*4].color = nexts[i].item1;
+        waitingBrick[i*4+1].color = nexts[i].item2;
+        waitingBrick[i*4+2].color = nexts[i].item3;
+        waitingBrick[i*4+3].color = nexts[i].item4;
+      }
+    }
+    waitingBrick.forEach((brick)=>brick.render(canvas));
+
+    if(controller.board != null) {
+      List<List<int>> cols = controller.board.toList(growable: false);
+      for(int i = 0; i < cols.length; ++i) {
+        for(int j = 0; j < cols[i].length; ++j) {
+          Brick.renderSingleByXY(this, canvas, cols[i][j], i, BOARD.ROW_NUM-j+1);
+        }
+      }
+    }
+    // End of draw bricks
+
     slidingBar.render(canvas);
 
     TextPainter textPainter = new TextPainter(
@@ -151,11 +178,11 @@ class LuminesGame extends Game {
   // Gestures
   void onTapDown(TapDownDetails details) {
     if(_bgColorRect.contains(details.globalPosition)) {
-      int rowNum = max(0, min(board.boardWidth-2*board.blockWidth, details.globalPosition.dx))~/board.blockWidth;
-      if(touchedRow != rowNum){
+      int colNum = max(0, min(board.boardWidth-2*board.blockWidth, details.globalPosition.dx))~/board.blockWidth;
+      if(touchedCol != colNum){
         VibrationUtil.lightImpact();
       }
-      touchedRow = rowNum;
+      touchedCol = colNum;
     }
     else if(spinningWheel.rrect.contains(details.globalPosition)) {
       spinningWheel.setOffset(details.globalPosition);
@@ -163,10 +190,14 @@ class LuminesGame extends Game {
   }
   void onTapUp(TapUpDetails details) {
     if(_bgColorRect.contains(details.globalPosition)) {
-      if(touchedRow != -1){
+      if(touchedCol != -1){
         VibrationUtil.lightImpact();
+        Tuple2<Tuple2<int, int>, Tuple2<int, int>> cur = curTile.getBySide();
+        controller.putByTuple(touchedCol, cur.item1, cur.item2);
+        spinningWheel.rotation = 0;
+        spinningWheel.rotateState = -1;
       }
-      touchedRow = -1;
+      touchedCol = -1;
     }
     else if(spinningWheel.rrect.contains(details.globalPosition)) {
       spinningWheel.setOffset(Offset(-1, -1));
@@ -188,16 +219,20 @@ class LuminesGame extends Game {
 
   handleMainUpdate(double x, double y) {
     if(x < 0) {
-      if(touchedRow != -1){
+      if(touchedCol != -1){
         VibrationUtil.lightImpact();
+        Tuple2<Tuple2<int, int>, Tuple2<int, int>> cur = curTile.getBySide();
+        controller.putByTuple(touchedCol, cur.item1, cur.item2);
+        spinningWheel.rotation = 0;
+        spinningWheel.rotateState = -1;
       }
-      touchedRow = -1;
+      touchedCol = -1;
     } else {
-      int rowNum = max(0, min(board.boardWidth-2*board.blockWidth, x))~/board.blockWidth;
-      if(touchedRow != rowNum){
+      int colNum = max(0, min(board.boardWidth-2*board.blockWidth, x))~/board.blockWidth;
+      if(touchedCol != colNum){
         VibrationUtil.lightImpact();
       }
-      touchedRow = rowNum;
+      touchedCol = colNum;
     }
   }
 }

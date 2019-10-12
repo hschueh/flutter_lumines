@@ -9,6 +9,8 @@ import 'package:tuple/tuple.dart';
 class LuminesController {
   final LuminesGame game;
   Tuple4 curBr;
+  List<List<int>> board;
+  List<int> boardHeight;
   Queue<Tuple4<int, int, int, int>> nextFive;
   static Random random;
   LuminesController(this.game){
@@ -18,8 +20,29 @@ class LuminesController {
     curBr = getRandomBrickTuple4();
     nextFive = Queue<Tuple4<int, int, int, int>>();
     for(int i = 0; i < 5; ++i) {
-      nextFive.add(getRandomBrickTuple4());
+      nextFive.addLast(getRandomBrickTuple4());
     }
+    board = new List<List<int>>.generate(BOARD.COL_NUM, (_) => [], growable: false);
+
+    // for(int i = 0; i < BOARD.COL_NUM; ++i) {
+    //   board.add(new List<int>.filled(BOARD.ROW_NUM, 0));
+    // }
+    boardHeight = new List<int>.filled(BOARD.COL_NUM, 0);
+  }
+
+  void putByTuple(int col, Tuple2<int, int> left, Tuple2<int, int> right) {
+    boardHeight[col] += 2;
+    boardHeight[col+1] += 2;
+    if(boardHeight[col] > BOARD.ROW_NUM || boardHeight[col+1] > BOARD.ROW_NUM) {
+      // died
+    }
+    board[col].add(left.item2);
+    board[col].add(left.item1);
+    board[col+1].add(right.item2);
+    board[col+1].add(right.item1);
+
+    curBr = nextFive.removeFirst();
+    nextFive.addLast(getRandomBrickTuple4());
   }
 
   static Tuple4<int, int, int, int> getRandomBrickTuple4() {
@@ -34,7 +57,6 @@ class LuminesController {
       random.nextInt(100)%2,
     );
   }
-
 }
 
 class BOARD {
