@@ -1,10 +1,6 @@
 import 'dart:ui';
-import 'package:flame/flame.dart';
-import 'package:flame/sprite.dart';
-import 'package:flame/components/component.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/gestures.dart';
-import 'package:flutter_lumines/game-controller.dart';
 import 'package:flutter_lumines/lumines-game.dart';
 import 'package:tuple/tuple.dart';
 
@@ -56,16 +52,17 @@ class BrickTile extends BaseGameObject {
 
 class Brick extends BaseGameObject {
   Rect rect;
-  static Border border = Border.all();
-  int color;//0: orange, 1: grey
+  static List<Border> borders = [
+    Border.all(),
+    Border(top:BorderSide(), left:BorderSide()),
+    Border(top:BorderSide(), right:BorderSide()),
+    Border(bottom:BorderSide(), left:BorderSide()),
+    Border(bottom:BorderSide(), right:BorderSide()),
+  ];
+  int color;//0: orange, 1: grey, 2: orange to be clean, 3: grey to be clean
   // int x,y;
   double x,y;
   bool isSmall = false;
-  
-  var _paint = Paint()..color = Color(0xffffffff);
-  var _rectSrc;
-  var _rectDst;
-
 
   Brick(LuminesGame game, this.x, this.y, this.color, this.isSmall) : super(game) {
     // rect = Rect.fromLTWH(x*BOARD.BLOCK_WIDTH.toDouble(), y*BOARD.BLOCK_HEIGHT.toDouble(), BOARD.BLOCK_WIDTH.toDouble(), BOARD.BLOCK_HEIGHT.toDouble());
@@ -76,18 +73,38 @@ class Brick extends BaseGameObject {
   @override
   void render(Canvas c) {
     rect = Rect.fromLTWH(x, y, isSmall?game.board.blockSizeSmall:game.board.blockSize, isSmall?game.board.blockSizeSmall:game.board.blockSize);
-    c.drawRect(this.rect, color==0?LuminesGame.orangePaint:LuminesGame.greyPaint);
-    border.paint(c, rect);
+    c.drawRect(this.rect, getPaintWithIndex(color));
+    borders[0].paint(c, rect);
   }
 
   @override
   void update(double t) {
   }
 
-  static void renderSingleByXY(LuminesGame game, Canvas c, int color, int x, int y) {
+  static Paint getPaintWithIndex(int i) {
+    Paint paint;
+    switch(i) {
+      case 0:
+        paint = LuminesGame.orangePaint;
+        break;
+      case 1:
+        paint = LuminesGame.greyPaint;
+        break;
+      case 2:
+        paint = LuminesGame.darkOrangePaint;
+        break;
+      case 3:
+        paint = LuminesGame.darkGreyPaint;
+        break;
+      default:
+        break;
+    }
+    return paint;
+  }
+  static void renderSingleByXY(LuminesGame game, Canvas c, int color, int x, int y, Border border) {
     Offset offsetTopLeft = Offset(0, game.board.yOffset);
     Rect rect = Rect.fromLTWH(offsetTopLeft.dx+x*game.board.blockSize, offsetTopLeft.dy+y*game.board.blockSize, game.board.blockSize, game.board.blockSize);
-    c.drawRect(rect, color==0?LuminesGame.orangePaint:LuminesGame.greyPaint);
+    c.drawRect(rect, getPaintWithIndex(color));
     border.paint(c, rect);
   }
 }

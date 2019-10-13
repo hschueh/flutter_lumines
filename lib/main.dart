@@ -6,34 +6,31 @@ import 'package:flutter_lumines/lumines-game.dart';
 import 'package:firebase_admob/firebase_admob.dart';
 
 void main() async {
-  // FirebaseAdMob.instance.initialize(appId: "ca-app-pub-3940256099942544~3347511713");
-  // MobileAdTargetingInfo targetingInfo = MobileAdTargetingInfo(
-  //   keywords: <String>['flutterio', 'beautiful apps'],
-  //   contentUrl: 'https://flutter.io',
-  //   birthday: DateTime.now(),
-  //   childDirected: false,
-  //   designedForFamilies: false,
-  //   gender: MobileAdGender.male, // or MobileAdGender.female, MobileAdGender.unknown
-  //   testDevices: <String>[], // Android emulators are considered test devices
-  // );
-  // BannerAd myBanner = BannerAd(
-  //   // Replace the testAdUnitId with an ad unit id from the AdMob dash.
-  //   // https://developers.google.com/admob/android/test-ads
-  //   // https://developers.google.com/admob/ios/test-ads
-  //   adUnitId: BannerAd.testAdUnitId,
-  //   size: AdSize.smartBanner,
-  //   targetingInfo: targetingInfo,
-  //   listener: (MobileAdEvent event) {
-  //     print("BannerAd event is $event");
-  //   },
-  // );
-  // myBanner
-  // // typically this happens well before the ad is shown
-  // ..load()
-  // ..show(
-  //   anchorOffset: 0.0,
-  //   anchorType: AnchorType.top,
-  // );
+  FirebaseAdMob.instance.initialize(appId: "ca-app-pub-3940256099942544~3347511713");
+  MobileAdTargetingInfo targetingInfo = MobileAdTargetingInfo(
+    keywords: <String>['flutterio', 'beautiful apps'],
+    contentUrl: 'https://flutter.io',
+    childDirected: false,
+    testDevices: <String>[], // Android emulators are considered test devices
+  );
+  BannerAd myBanner = BannerAd(
+    // Replace the testAdUnitId with an ad unit id from the AdMob dash.
+    // https://developers.google.com/admob/android/test-ads
+    // https://developers.google.com/admob/ios/test-ads
+    adUnitId: BannerAd.testAdUnitId,
+    size: AdSize.smartBanner,
+    targetingInfo: targetingInfo,
+    listener: (MobileAdEvent event) {
+      print("BannerAd event is $event");
+    },
+  );
+  myBanner
+  // typically this happens well before the ad is shown
+  ..load()
+  ..show(
+    anchorOffset: 0.0,
+    anchorType: AnchorType.bottom,
+  );
 
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp, DeviceOrientation.portraitDown]);
   Util flameUtil = Util();
@@ -55,33 +52,71 @@ GestureRecognizer createTapRecognizer(LuminesGame game) {
     ..onTapUp = game.onTapUp;
 }
 
-class GameApp extends StatelessWidget {
-  LuminesGame game;
+class GameApp extends StatefulWidget {
+  final LuminesGame game;
   GameApp(this.game);
+
+  startGame() {
+    game.startGame();
+  }
+
+  pauseGame() {
+    game.pauseGame();
+  }
+
+  resumeGame() {
+    game.resumeGame();
+  }
+
+  @override
+  GameAppState createState() {
+    State<GameApp> state = GameAppState();
+    game.setGameAppState(state);
+    return state;
+  }
+}
+
+class GameAppState extends State<GameApp> {
+  int state = 0;
 
   @override
   Widget build(BuildContext context) {
+  final List<FloatingActionButton> fabList =[ FloatingActionButton.extended(
+                    onPressed: () {
+                      widget.startGame();
+                    },
+                    label: Text('開始'),
+                    icon: Icon(Icons.play_arrow)
+                  ),
+                  FloatingActionButton.extended(
+                    onPressed: () {
+                      widget.pauseGame();
+                    },
+                    label: Text('暫停'),
+                    icon: Icon(Icons.pause)
+                  ),
+                  FloatingActionButton.extended(
+                    onPressed: () {
+                      widget.resumeGame();
+                    },
+                    label: Text('回到遊戲'),
+                    icon: Icon(Icons.restore)
+                  )];
     return MaterialApp(
       title: 'Playing Scene',
       home: Stack(
         children: [
           Center(
-            child: game.widget,
+            child: widget.game.widget,
           ),
           Container(
             alignment: Alignment.center,
-            margin: EdgeInsets.all(16),
+            margin: EdgeInsets.fromLTRB(16, 0, 0, 64),
             child: Stack(
               children: [
                 Align(
                   alignment: Alignment.bottomLeft,
-                  child: FloatingActionButton.extended(
-                    onPressed: () {
-                      game.startGame();
-                    },
-                    label: Text('開始'),
-                    icon: Icon(Icons.play_arrow)
-                  )
+                  child: fabList[state%3]
                 ),
               ]
             ),
@@ -89,35 +124,5 @@ class GameApp extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  // @override
-  // _GameState createState() {
-  //   return _GameState();
-  // }
-}
-
-
-class _GameState extends State<StatefulWidget> {
-  int state = 0;
-
-  void setGameState(int gameState) {
-    setState(() { state = gameState; });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return state==0?FloatingActionButton.extended(
-                    onPressed: () {
-                    },
-                    label: Text('開始'),
-                    icon: Icon(Icons.play_arrow)
-                  ):
-                  FloatingActionButton.extended(
-                    onPressed: () {
-                    },
-                    label: Text('暫停'),
-                    icon: Icon(Icons.pause)
-                  );
   }
 }

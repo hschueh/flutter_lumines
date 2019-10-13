@@ -39,11 +39,6 @@ class SpinningWheel extends BaseGameObject {
 
   }
 
-  @override
-  void contains(double t) {
-
-  }
-
   // 0: unrotated
   // 1: 90 degree
   // 2: 180 degree

@@ -1,5 +1,4 @@
 import 'dart:collection';
-import 'dart:io';
 import 'dart:math';
 import 'dart:ui';
 import 'package:flutter/cupertino.dart';
@@ -10,12 +9,19 @@ class LuminesController {
   final LuminesGame game;
   Tuple4 curBr;
   List<List<int>> board;
+  //1: lt, 2: rt, 3: lb, 4: rb
+  List<List<int>> borders;
+  List<List<int>> scores;
   List<int> boardHeight;
   Queue<Tuple4<int, int, int, int>> nextFive;
+  int gameState = 0; // 0: idle. 1: playing. 2: pause. 3: end.
+  int score;
+  double timeLeft;
   static Random random;
   LuminesController(this.game){
     initialize();
   }
+
   void initialize() async {
     curBr = getRandomBrickTuple4();
     nextFive = Queue<Tuple4<int, int, int, int>>();
@@ -23,7 +29,10 @@ class LuminesController {
       nextFive.addLast(getRandomBrickTuple4());
     }
     board = new List<List<int>>.generate(BOARD.COL_NUM, (_) => [], growable: false);
-
+    borders = new List<List<int>>.generate(BOARD.COL_NUM, (_) => [0,0,0,0,0,0,0,0,0,0], growable: false);
+    scores = new List<List<int>>.generate(BOARD.COL_NUM, (_) => [0,0,0,0,0,0,0,0,0,0], growable: false);
+    score = 0;
+    timeLeft = BOARD.GAME_LENGTH;
     // for(int i = 0; i < BOARD.COL_NUM; ++i) {
     //   board.add(new List<int>.filled(BOARD.ROW_NUM, 0));
     // }
@@ -43,6 +52,60 @@ class LuminesController {
 
     curBr = nextFive.removeFirst();
     nextFive.addLast(getRandomBrickTuple4());
+
+    checkCouldClear();
+  }
+
+  void checkCouldClear({int column:BOARD.COL_NUM}) {
+      List<List<int>> cols = board.toList(growable: false);
+      // Not sure if this is good way... remove the "could be clear" related state everytime.
+      for(int i = 0; i < column; ++i) {
+        for(int j = 0; j < cols[i].length; ++j) {
+          cols[i][j] = cols[i][j]%2;
+          borders[i][j] = 0;
+          scores[i][j] = 0;
+        }
+      }
+
+      for(int i = 0; i < column-1; ++i) {
+        for(int j = 1; j < cols[i].length; ++j) {
+          if(!(j < cols[i+1].length))
+            continue;
+          if(cols[i][j]%2 == cols[i+1][j]%2 &&
+              cols[i][j]%2 == cols[i][j-1]%2 &&
+              cols[i][j]%2 == cols[i+1][j-1]%2) {
+            int newVal = cols[i][j]%2+2;
+            cols[i][j] = newVal;
+            cols[i][j-1] = newVal;
+            cols[i+1][j] = newVal;
+            cols[i+1][j-1] = newVal;
+            borders[i][j] = 1;
+            borders[i+1][j] = 2;
+            borders[i][j-1] = 3;
+            borders[i+1][j-1] = 4;
+            scores[i+1][j-1] = 1;
+          }
+        }
+      }
+  }
+
+  void cleanUpCol(int col) {
+    int sum = 0;
+    for(int i = 0; i < scores[col].length; ++i) {
+      sum += scores[col][i];
+      scores[col][i] = 0;
+    }
+    borders[col] = [0,0,0,0,0,0,0,0,0,0];
+    int pointer = 0;
+    while(pointer < board[col].length) {
+      if(board[col][pointer] > 1)
+        board[col].removeAt(pointer);
+      else
+        ++pointer;
+    }
+    boardHeight[col] = board[col].length;
+    score += sum;
+    checkCouldClear(column:col);
   }
 
   static Tuple4<int, int, int, int> getRandomBrickTuple4() {
@@ -56,6 +119,16 @@ class LuminesController {
       random.nextInt(100)%2,
       random.nextInt(100)%2,
     );
+  }
+
+  void update(double t) {
+    timeLeft -= t;
+    if(timeLeft < 0) {
+      gameState = 3;
+      game.gameAppState.setState(
+        () { game.gameAppState.state=3; }
+      );
+    }
   }
 }
 

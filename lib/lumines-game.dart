@@ -4,14 +4,13 @@ import 'package:flame/game.dart';
 import 'package:flame/flame.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_lumines/components/bar.dart';
 import 'package:flutter_lumines/components/spinning-wheel.dart';
 import 'package:tuple/tuple.dart';
 import 'components/brick.dart';
-import 'components/text-button.dart';
 import 'game-controller.dart';
+import 'main.dart';
 import 'vibration-util.dart';
 
 class LuminesGame extends Game {
@@ -42,8 +41,7 @@ class LuminesGame extends Game {
   DraggableSpinner spinnerDragger;
   Bar slidingBar;
   SpinningWheel spinningWheel;
-  double timeLeft;
-  int gameState = 0;
+  GameAppState gameAppState;
 
   List<Brick> waitingBrick = List<Brick>();
   BrickTile curTile;
@@ -66,7 +64,6 @@ class LuminesGame extends Game {
     spinnerDragger = DraggableSpinner(this);
     slidingBar = Bar(this, board.yOffset, slideBarPaint);
     spinningWheel = SpinningWheel(this, board.boardWidth/2, board.boardHeight+board.yOffset+95, greyPaint, darkGreyPaint);
-    timeLeft = BOARD.GAME_LENGTH;
     double renderFrom = screenSize.width/4;
     for(int i = 0; i < 5; ++i) {
       double size = i>0?board.blockSizeSmall:board.blockSize;
@@ -78,13 +75,21 @@ class LuminesGame extends Game {
     }
     curTile = BrickTile(this, 7, 0, controller.curBr);
   }
+  void setGameAppState(GameAppState state) {
+    this.gameAppState = state;
+  }
+
+  void reset() {
+    controller.initialize();
+  }
+
   void resize(Size size) {
     board = BOARD.getInstance(size);
     screenSize = size;
 
     _bgColorRect = Rect.fromLTWH(0, board.yOffset, board.boardWidth, board.boardHeight);
     _nextRect = Rect.fromLTWH(0, 0, board.boardWidth, board.yOffset);
-    _countDownRect = Rect.fromLTWH(0, 0, board.boardWidth, board.yOffset);
+    _countDownRect = Rect.fromLTWH(0, 0, board.boardWidth/5, board.yOffset);
   }
 
   void render(Canvas canvas) {
@@ -138,7 +143,7 @@ class LuminesGame extends Game {
       List<List<int>> cols = controller.board.toList(growable: false);
       for(int i = 0; i < cols.length; ++i) {
         for(int j = 0; j < cols[i].length; ++j) {
-          Brick.renderSingleByXY(this, canvas, cols[i][j], i, BOARD.ROW_NUM-j+1);
+          Brick.renderSingleByXY(this, canvas, cols[i][j], i, BOARD.ROW_NUM-j+1, Brick.borders[controller.borders[i][j]]);
         }
       }
     }
@@ -146,33 +151,52 @@ class LuminesGame extends Game {
 
     slidingBar.render(canvas);
 
-    TextPainter textPainter = new TextPainter(
-      text: TextSpan(text: timeLeft.truncate().toString(), style: new TextStyle(color: Colors.black, fontSize: 36)),
+    TextPainter timePainter = new TextPainter(
+      text: TextSpan(text: controller.timeLeft.truncate().toString(), style: new TextStyle(color: Colors.black, fontSize: 36)),
       textAlign: TextAlign.center, textDirection: TextDirection.ltr);
-    textPainter.layout(maxWidth: screenSize.width, minWidth: screenSize.width/5);
-    textPainter.paint(canvas, Offset(0,0));
+    timePainter.layout(maxWidth: screenSize.width, minWidth: _countDownRect.width);
+    timePainter.paint(canvas, Offset(_countDownRect.left,_countDownRect.top));
+
+    TextPainter scorePainter = new TextPainter(
+      text: TextSpan(text: controller.score.toString(), style: new TextStyle(color: Colors.black, fontSize: 36)),
+      textAlign: TextAlign.center, textDirection: TextDirection.ltr);
+    scorePainter.layout(maxWidth: screenSize.width, minWidth: screenSize.width/5);
+    scorePainter.paint(canvas, Offset(0,board.yOffset+board.boardHeight));
 
     spinningWheel.render(canvas);
   }
 
   void update(double t) {
-    if(gameState == 1) {
+    if(controller.gameState == 1) {
       slidingBar.update(t);
-      timeLeft -= t;
+      controller.update(t);
     }
-
-    if(timeLeft <= 0)
-      gameState = 0;
   }
 
   void startGame() {
-    if(gameState == 0 || timeLeft <= 0)
-      timeLeft = BOARD.GAME_LENGTH;
-    gameState = 1;
+    controller.gameState = 1;
+    gameAppState.setState(
+      () { gameAppState.state=1; }
+    );
+    reset();
   }
 
-  void pause() {
-    gameState = 2;
+  void pauseGame() {
+    controller.gameState = 2;
+    gameAppState.setState(
+      () { gameAppState.state=2; }
+    );
+  }
+
+  void resumeGame() {
+    controller.gameState = 1;
+    gameAppState.setState(
+      () { gameAppState.state=1; }
+    );
+  }
+
+  void cleanUpCol(int col) {
+    controller.cleanUpCol(col);
   }
 
   // Gestures
@@ -211,6 +235,7 @@ class LuminesGame extends Game {
     else if(spinningWheel.rrect.contains(offset)) {
       return spinnerDragger;
     }
+    return null;
   }
 
   handleSpinUpdate(double x, double y) {
