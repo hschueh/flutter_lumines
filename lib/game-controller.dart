@@ -32,10 +32,8 @@ class LuminesController {
     borders = new List<List<int>>.generate(BOARD.COL_NUM, (_) => [0,0,0,0,0,0,0,0,0,0], growable: false);
     scores = new List<List<int>>.generate(BOARD.COL_NUM, (_) => [0,0,0,0,0,0,0,0,0,0], growable: false);
     score = 0;
+    game.slidingBar.x = 0;
     timeLeft = BOARD.GAME_LENGTH;
-    // for(int i = 0; i < BOARD.COL_NUM; ++i) {
-    //   board.add(new List<int>.filled(BOARD.ROW_NUM, 0));
-    // }
     boardHeight = new List<int>.filled(BOARD.COL_NUM, 0);
   }
 
@@ -43,7 +41,12 @@ class LuminesController {
     boardHeight[col] += 2;
     boardHeight[col+1] += 2;
     if(boardHeight[col] > BOARD.ROW_NUM || boardHeight[col+1] > BOARD.ROW_NUM) {
-      // died
+      gameState = 3;
+      game.gameAppState.setState(
+        () { game.gameAppState.state=3; }
+      );
+      initialize();
+      return;
     }
     board[col].add(left.item2);
     board[col].add(left.item1);
